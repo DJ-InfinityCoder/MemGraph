@@ -1,0 +1,18 @@
+{
+  "flat": {
+    "accuracy": 0.3,
+    "stale_rate": 0.61,
+    "avg_context_words": 9.9
+  },
+  "graph": {
+    "accuracy": 1.0,
+    "stale_rate": 0.0,
+    "avg_context_words": 4.0
+  },
+  "config": {
+    "users": 50,
+    "sessions": 8,
+    "k": 3,
+    "provider": "mock"
+  }
+}
