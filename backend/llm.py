@@ -3,7 +3,7 @@ import os
 
 DEFAULT_MODEL = "gemini-3.8-flash"
 
-def chat(prompt, system="", model=DEFAULT_MODEL, api_key=None, timeout=60):
+def chat(prompt, system="", model=DEFAULT_MODEL, api_key=None, timeout=20):
     """Execute chat completion with Gemini 3.8 Flash."""
     import httpx
     model = model or DEFAULT_MODEL
@@ -13,7 +13,12 @@ def chat(prompt, system="", model=DEFAULT_MODEL, api_key=None, timeout=60):
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}]
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "thinkingConfig": {
+                "thinkingLevel": "LOW"
+            }
+        }
     }
     if system:
         payload["systemInstruction"] = {"parts": [{"text": system}]}
@@ -25,7 +30,6 @@ def chat(prompt, system="", model=DEFAULT_MODEL, api_key=None, timeout=60):
     if candidates and "content" in candidates[0]:
         parts = candidates[0]["content"].get("parts", [])
         if parts:
-            # Filter out thinking process parts to get only final model response
             texts = [p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)]
             if texts:
                 return "".join(texts)

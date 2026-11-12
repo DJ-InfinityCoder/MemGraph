@@ -54,14 +54,20 @@ def chat(r: ChatReq):
             model=MODEL_NAME
         )
     except Exception as e:
-        if not os.getenv("GEMINI_API_KEY"):
-            # Informative fallback if key not yet added to .env
-            reply = (
-                f"(Gemini 3.8 Flash: GEMINI_API_KEY not found in .env) "
-                f"Consolidated memory context: {' | '.join(ctx) if ctx else 'None'}"
-            )
+        err_msg = str(e)
+        if "503" in err_msg or "high demand" in err_msg.lower():
+            prefix = "(Gemini 3.8 Flash high demand / 503 fallback)"
+        elif "timeout" in err_msg.lower():
+            prefix = "(Gemini 3.8 Flash network timeout)"
+        elif not os.getenv("GEMINI_API_KEY"):
+            prefix = "(Gemini 3.8 Flash: GEMINI_API_KEY not found in .env)"
         else:
-            raise HTTPException(400, str(e))
+            prefix = f"(Gemini 3.8 Flash offline: {err_msg})"
+
+        reply = (
+            f"{prefix} "
+            + (f"Noted: {'; '.join(f'{s} {rel} {o}' for s, rel, o in facts)}" if facts else f"Memory context: {' | '.join(ctx) if ctx else 'none'}")
+        )
 
     if not reply:
         reply = (
