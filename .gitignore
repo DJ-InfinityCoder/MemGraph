@@ -34,3 +34,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# Local personal-memory database
+data/
+*.sqlite3
+*.sqlite3-*

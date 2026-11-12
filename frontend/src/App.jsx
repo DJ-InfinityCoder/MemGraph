@@ -80,7 +80,8 @@ function Chat({ onUpdate }) {
           text: r.reply,
           retrieved: r.retrieved,
           facts: r.facts,
-          model: r.model || "gemini-3.8-flash",
+          model: r.model || "not configured",
+          extraction: r.extraction?.mode, generation: r.generation, memory,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -106,7 +107,7 @@ function Chat({ onUpdate }) {
     { label: "Step 1: Declare fact", query: "I live in Pune." },
     { label: "Step 2: Update fact", query: "I moved to Delhi." },
     { label: "Step 3: Test query", query: "Where do I live?" },
-    { label: "Step 4: Add preference", query: "I love black coffee." },
+    { label: "Step 4: Retract fact", query: "I no longer live in Delhi." },
   ];
 
   return (
@@ -141,7 +142,10 @@ function Chat({ onUpdate }) {
                   )}
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  Flat (Baseline)
+                  Lexical (Baseline)
+                </button>
+                <button onClick={() => setMemory("latest")} className={cn("px-3 py-1 text-xs rounded-md", memory === "latest" ? "bg-white text-black" : "text-zinc-400")}>
+                  Latest Value
                 </button>
               </div>
             </div>
@@ -164,9 +168,9 @@ function Chat({ onUpdate }) {
                 <div className="w-12 h-12 rounded-full border border-zinc-800 bg-zinc-950 flex items-center justify-center mb-3 text-zinc-300">
                   <Database className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-semibold text-white mb-1">Gemini Agentic Memory Ready</h4>
+                <h4 className="text-base font-semibold text-white mb-1">Personal Memory Ready</h4>
                 <p className="text-xs text-zinc-400 max-w-sm mb-5 leading-relaxed">
-                  Powered by Gemini 3.8 Flash. Give statements to dynamically extract knowledge triples and test supersession.
+                  State a fact, correct it, or retract it. Offline preview works without an API key.
                 </p>
 
                 <div className="w-full max-w-md grid grid-cols-2 gap-2 text-left">
@@ -197,7 +201,7 @@ function Chat({ onUpdate }) {
                   )}
                 >
                   <div className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-500 px-1">
-                    <span>{m.role === "you" ? "USER" : "GEMINI 3.8 FLASH"}</span>
+                    <span>{m.role === "you" ? "USER" : "ASSISTANT"}</span>
                     <span>â€¢</span>
                     <span>{m.timestamp}</span>
                   </div>
@@ -211,12 +215,13 @@ function Chat({ onUpdate }) {
                     )}
                   >
                     <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                    {m.role === "ai" && <p className="text-[10px] text-zinc-500 mt-2">Extraction: {m.extraction} · Response: {m.generation} · Model: {m.model}</p>}
 
                     {/* Retrieved facts drawer if present */}
                     {m.retrieved && m.retrieved.length > 0 && (
                       <div className="mt-3 pt-2.5 border-t border-zinc-800 text-xs">
                         <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1.5 flex items-center gap-1">
-                          <History className="w-3 h-3" /> Retrieved Context ({memory}):
+                          <History className="w-3 h-3" /> Retrieved Context ({m.memory}):
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {m.retrieved.map((fact, fi) => (
@@ -286,19 +291,19 @@ function Chat({ onUpdate }) {
           <CardContent className="space-y-3 text-xs text-zinc-400 leading-relaxed">
             <div>
               <span className="font-semibold text-white block mb-0.5">Consolidation Engine</span>
-              When Gemini extracts new assertions about an entity (e.g. city or company), the graph engine detects functional supersession and flags conflicting older edges as inactive.
+              When the extractor identifies new assertions about an entity (e.g. city or company), the graph engine detects functional supersession and flags conflicting older edges as inactive.
             </div>
             <div>
-              <span className="font-semibold text-white block mb-0.5">Eliminating Stale Hallucinations</span>
-              Flat vector memory retrieves both past and present facts if lexical similarity is high. Graph memory retrieves solely active nodes.
+              <span className="font-semibold text-white block mb-0.5">Handling Stale Facts</span>
+              Flat lexical memory retrieves both past and present facts if lexical similarity is high. Graph memory retrieves active facts. A latest-value baseline tests whether graph history helps.
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-zinc-800 bg-zinc-950/60 p-4">
           <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Model Backend</span>
-            <span className="font-mono text-white">Gemini 3.8 Flash</span>
+            <span>Memory storage</span>
+            <span className="font-mono text-white">This browser session</span>
           </div>
         </Card>
       </div>
@@ -313,11 +318,21 @@ function Graph({ tick }) {
   const [g, setG] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(false);
 
+  const [err, setErr] = useState("");
+  const forgetFact = async (edge) => {
+    setLoading(true);
+    setErr("");
+    try {
+      await api("/facts/forget", { relation: edge.label, value: edge.target });
+      setG(await api("/graph"));
+    } catch (error) { setErr(error.message); }
+    finally { setLoading(false); }
+  };
   const fetchGraph = () => {
     setLoading(true);
     api("/graph")
       .then(setG)
-      .catch(() => {})
+      .catch((error) => setErr(error.message))
       .finally(() => setLoading(false));
   };
 
@@ -353,7 +368,7 @@ function Graph({ tick }) {
               Consolidated Knowledge Graph
             </CardTitle>
             <CardDescription className="text-zinc-400 mt-1">
-              Visualizes real-time entity resolution, relation edges, and superseded historical facts.
+              Inspect remembered facts, relation edges, and inactive historical facts.
             </CardDescription>
           </div>
 
@@ -378,7 +393,15 @@ function Graph({ tick }) {
       </CardHeader>
 
       <CardContent className="p-6">
-        {g.nodes.length === 0 ? (
+        {err && <p role="alert" className="text-red-400 mb-3">{err}</p>}
+        <p className="text-xs text-zinc-400 mb-3">Correct a fact in Chat, for example “I live in Delhi.” Forget removes source messages containing that fact. For city, employer, and favorites, it also clears the relation’s history so an old value cannot return. Other facts in those messages are removed.</p>
+        <div className="space-y-2 mb-5">
+          {g.edges.map((edge, index) => <div key={index} className="flex items-center justify-between text-sm border border-zinc-800 rounded p-2">
+            <span>{edge.label.replaceAll("_", " ")}: {edge.target} <span className="text-zinc-500">({edge.active ? "current" : "inactive"})</span></span>
+            <Button variant="outline" size="sm" disabled={loading} onClick={() => forgetFact(edge)}>Forget</Button>
+          </div>)}
+        </div>
+        {g.edges.length === 0 ? (
           <div className="h-80 flex flex-col items-center justify-center text-center border border-dashed border-zinc-800 rounded-xl">
             <Network className="w-10 h-10 text-zinc-600 mb-3" />
             <p className="text-sm font-medium text-zinc-300">No entities in memory yet</p>
@@ -520,7 +543,7 @@ function Graph({ tick }) {
                 </span>
               </div>
               <span className="font-mono text-[11px] text-zinc-500">
-                Extracted via Gemini 3.8 Flash
+                Personal facts from this browser session
               </span>
             </div>
           </div>
@@ -536,237 +559,47 @@ function Graph({ tick }) {
 function Evaluate() {
   const [res, setRes] = useState(null);
   const [users, setUsers] = useState(30);
+  const [extraction, setExtraction] = useState("rules");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-
+  const names = { flat: "Lexical retrieval", latest: "Latest-value dictionary", graph: "Graph memory",
+    graph_no_supersession: "Graph: no supersession", graph_no_recency: "Graph: no recency",
+    graph_no_relation_matching: "Graph: no relation matching" };
   const run = async () => {
-    setBusy(true);
-    setErr("");
-    try {
-      const data = await api("/eval", { users });
-      setRes(data);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setErr(""); setRes(null);
+    try { setRes(await api("/eval", { users, extraction })); }
+    catch (error) { setErr(error.message); }
+    finally { setBusy(false); }
   };
-
-  return (
-    <div className="space-y-6">
-      <Card className="border-zinc-800 bg-zinc-950/80">
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-white" />
-                Benchmark Suite: Long-Horizon Persona Evaluation
-              </CardTitle>
-              <CardDescription className="text-zinc-400 mt-1">
-                Evaluates Graph Memory against Flat Vector Memory across multi-session evolved persona benchmarks.
-              </CardDescription>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-zinc-400">Users:</span>
-                <Input
-                  type="number"
-                  min="5"
-                  max="100"
-                  value={users}
-                  onChange={(e) => setUsers(Math.max(1, +e.target.value))}
-                  className="w-20 text-center font-mono h-9"
-                  disabled={busy}
-                />
-              </div>
-              <Button
-                onClick={run}
-                disabled={busy}
-                className="bg-white text-black hover:bg-zinc-200 font-semibold"
-              >
-                {busy ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Running Simulationâ€¦
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Run Benchmark
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        {err && (
-          <div className="mx-6 mb-4 p-3 rounded-lg border border-red-900/50 bg-red-950/20 text-red-400 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{err}</span>
-          </div>
-        )}
-
-        <CardContent>
-          {res ? (
-            <div className="space-y-6">
-              {/* Metric Hero Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-zinc-800 bg-zinc-900/40 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono uppercase text-zinc-400">Accuracy (â†‘)</span>
-                    <ShieldCheck className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <span className="text-2xl font-bold text-white font-mono">
-                        {(res.graph.accuracy * 100).toFixed(1)}%
-                      </span>
-                      <span className="text-xs text-zinc-400 block mt-0.5">Graph Memory</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-mono text-zinc-500">
-                        {(res.flat.accuracy * 100).toFixed(1)}%
-                      </span>
-                      <span className="text-xs text-zinc-500 block mt-0.5">Flat Baseline</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                    <div
-                      className="bg-white h-full rounded-full transition-all duration-500"
-                      style={{ width: `${res.graph.accuracy * 100}%` }}
-                    />
-                  </div>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-900/40 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono uppercase text-zinc-400">Stale Leakage (â†“)</span>
-                    <AlertCircle className="w-4 h-4 text-zinc-400" />
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <span className="text-2xl font-bold text-white font-mono">
-                        {(res.graph.stale_rate * 100).toFixed(1)}%
-                      </span>
-                      <span className="text-xs text-zinc-400 block mt-0.5">Graph Memory</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-mono text-zinc-500">
-                        {(res.flat.stale_rate * 100).toFixed(1)}%
-                      </span>
-                      <span className="text-xs text-zinc-500 block mt-0.5">Flat Baseline</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-zinc-800 h-1.5 rounded-full mt-3 overflow-hidden">
-                    <div
-                      className="bg-zinc-500 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${res.flat.stale_rate * 100}%` }}
-                    />
-                  </div>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-900/40 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-mono uppercase text-zinc-400">Avg Context Size</span>
-                    <Layers className="w-4 h-4 text-zinc-400" />
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <span className="text-2xl font-bold text-white font-mono">
-                        {res.graph.avg_context_words}
-                      </span>
-                      <span className="text-xs text-zinc-400 block mt-0.5">Words (Graph)</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-mono text-zinc-500">
-                        {res.flat.avg_context_words}
-                      </span>
-                      <span className="text-xs text-zinc-500 block mt-0.5">Words (Flat)</span>
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-zinc-400 mt-3 font-mono">
-                    Efficiency gain: {((1 - res.graph.avg_context_words / res.flat.avg_context_words) * 100).toFixed(0)}% fewer tokens
-                  </div>
-                </Card>
-              </div>
-
-              {/* Data Table */}
-              <div className="rounded-xl border border-zinc-800 overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-zinc-900/80 text-xs font-mono uppercase text-zinc-400 border-b border-zinc-800">
-                    <tr>
-                      <th className="py-3 px-4 font-semibold">Memory Architecture</th>
-                      <th className="py-3 px-4 font-semibold">Accuracy (Current Fact)</th>
-                      <th className="py-3 px-4 font-semibold">Stale Rate (Leaked)</th>
-                      <th className="py-3 px-4 font-semibold">Avg Context Words</th>
-                      <th className="py-3 px-4 font-semibold">Model</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800/80 font-mono text-xs">
-                    <tr className="bg-zinc-950/60 hover:bg-zinc-900/40 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-white flex items-center gap-2">
-                        <Network className="w-4 h-4 text-white" />
-                        Graph Memory
-                      </td>
-                      <td className="py-3 px-4 text-white font-bold">
-                        {(res.graph.accuracy * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-4 text-zinc-400">
-                        {(res.graph.stale_rate * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-4 text-zinc-300">
-                        {res.graph.avg_context_words}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="default" className="text-[10px]">
-                          gemini-3.8-flash
-                        </Badge>
-                      </td>
-                    </tr>
-                    <tr className="bg-zinc-950/30 hover:bg-zinc-900/40 transition-colors text-zinc-400">
-                      <td className="py-3 px-4 font-medium flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-zinc-500" />
-                        Flat Memory (Baseline)
-                      </td>
-                      <td className="py-3 px-4">
-                        {(res.flat.accuracy * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-4 text-zinc-300">
-                        {(res.flat.stale_rate * 100).toFixed(1)}%
-                      </td>
-                      <td className="py-3 px-4">
-                        {res.flat.avg_context_words}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="text-[10px] text-zinc-500 border-zinc-800">
-                          Baseline
-                        </Badge>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="h-64 flex flex-col items-center justify-center text-center border border-dashed border-zinc-800 rounded-xl">
-              <BarChart3 className="w-10 h-10 text-zinc-600 mb-3" />
-              <p className="text-sm font-medium text-zinc-300">No benchmark run in this session</p>
-              <p className="text-xs text-zinc-500 mt-1 max-w-sm">
-                Click "Run Benchmark" above to test persona evaluation across {users} simulated users with Gemini 3.8 Flash.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <Card className="border-zinc-800 bg-zinc-950/80">
+    <CardHeader>
+      <CardTitle>Personal-memory retrieval benchmark</CardTitle>
+      <CardDescription>Templated synthetic conversations. These scores measure retrieved facts, not assistant answer quality.</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm">Simulated users <Input aria-label="Simulated users" type="number" min="1" max="100" value={users} disabled={busy} onChange={e => setUsers(Math.min(100, Math.max(1, Number(e.target.value) || 1)))} className="w-24 inline-block ml-2" /></label>
+        <label className="text-sm">Extraction <select aria-label="Extraction mode" value={extraction} disabled={busy} onChange={e => setExtraction(e.target.value)} className="bg-zinc-900 border border-zinc-700 p-2 rounded ml-2"><option value="rules">Rules (offline)</option><option value="llm">Gemini (requires configuration)</option></select></label>
+        <Button disabled={busy} onClick={run}>{busy ? "Running…" : "Run benchmark"}</Button>
+      </div>
+      {err && <p role="alert" className="text-red-400">{err}</p>}
+      {res && <>
+        <p className="text-xs text-zinc-400">Extraction: {res.config.extraction} · Model: {res.config.model || "none (offline)"} · Fallbacks: {res.config.fallback_count} · Seed: {res.config.seed} · Context budget: {res.config.max_context_words} words</p>
+        <div className="overflow-x-auto"><table className="w-full text-sm text-left">
+          <thead><tr className="border-b border-zinc-700"><th className="p-3">Method</th><th className="p-3">Current-fact retrieval accuracy</th><th className="p-3">Stale context rate</th><th className="p-3">Avg. context words</th></tr></thead>
+          <tbody>{Object.entries(names).filter(([key]) => res[key]).map(([key, label]) => <tr key={key} className="border-b border-zinc-800"><td className="p-3">{label}</td><td className="p-3">{(res[key].current_fact_retrieval_accuracy * 100).toFixed(1)}%</td><td className="p-3">{(res[key].stale_rate * 100).toFixed(1)}%</td><td className="p-3">{res[key].avg_context_words}</td></tr>)}</tbody>
+        </table></div>
+        <p className="text-sm text-zinc-400">The latest-value dictionary shares extraction and ranking with graph memory. Equal scores mean this benchmark provides no evidence that retaining graph history improves retrieval.</p>
+        <details className="text-sm"><summary className="cursor-pointer">Language challenge diagnostics</summary>
+          <p className="text-xs text-zinc-400 my-2">Hand-authored checks cover retractions, attribution, historical facts, uncertainty, and an unsupported paraphrase. These are diagnostics, not held-out research evidence.</p>
+          {Object.entries(res.challenge_suite?.methods || {}).map(([key, result]) => <div key={key} className="my-2 text-sm"><span>{names[key]}: {result.passed}/{result.total} passed</span><ul className="text-xs text-zinc-400 ml-4">{result.cases.filter(item => !item.passed).map(item => <li key={item.name}>{item.name}: expected {item.expected || "no retrieved facts"}; retrieved {item.context || "nothing"}</li>)}</ul></div>)}
+        </details>
+        <details className="text-sm"><summary className="cursor-pointer">Inspect failure examples</summary><pre className="mt-3 text-xs whitespace-pre-wrap break-words">{JSON.stringify(res.failures, null, 2)}</pre></details>
+      </>}
+    </CardContent>
+  </Card>;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Root Application Component                                                 */
-/* -------------------------------------------------------------------------- */
 export default function App() {
   const [tab, setTab] = useState("chat");
   const [tick, setTick] = useState(0);

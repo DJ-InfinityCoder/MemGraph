@@ -1,0 +1,96 @@
+[
+  {
+    "name": "explicit retraction",
+    "turns": [
+      "I live in Pune.",
+      "I no longer live in Pune."
+    ],
+    "query": "Where do I live?",
+    "expected": null,
+    "stale": [
+      "pune"
+    ]
+  },
+  {
+    "name": "return to previous value",
+    "turns": [
+      "I live in Pune.",
+      "I live in Delhi.",
+      "I live in Pune."
+    ],
+    "query": "Where do I live?",
+    "expected": "pune",
+    "stale": [
+      "delhi"
+    ]
+  },
+  {
+    "name": "third-party attribution",
+    "turns": [
+      "I live in Pune.",
+      "My friend says I live in Mumbai."
+    ],
+    "query": "Where do I live?",
+    "expected": "pune",
+    "stale": [
+      "mumbai"
+    ]
+  },
+  {
+    "name": "historical statement",
+    "turns": [
+      "I live in Pune.",
+      "I used to live in Delhi."
+    ],
+    "query": "Where do I live?",
+    "expected": "pune",
+    "stale": [
+      "delhi"
+    ]
+  },
+  {
+    "name": "hypothetical",
+    "turns": [
+      "I work at Infosys.",
+      "If I work at Google, I will move."
+    ],
+    "query": "Which company do I work at?",
+    "expected": "infosys",
+    "stale": [
+      "google"
+    ]
+  },
+  {
+    "name": "unseen paraphrase",
+    "turns": [
+      "I live in Pune.",
+      "Delhi is my new home."
+    ],
+    "query": "Where do I live?",
+    "expected": "delhi",
+    "stale": [
+      "pune"
+    ]
+  },
+  {
+    "name": "preference revision",
+    "turns": [
+      "My favorite food is pizza.",
+      "My favorite food is dosa."
+    ],
+    "query": "What is my favorite food?",
+    "expected": "dosa",
+    "stale": [
+      "pizza"
+    ]
+  },
+  {
+    "name": "unknown fact",
+    "turns": [
+      "I live in Pune."
+    ],
+    "query": "What is my favorite food?",
+    "expected": null,
+    "stale": []
+  }
+]

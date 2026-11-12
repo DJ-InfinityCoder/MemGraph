@@ -1,35 +1,68 @@
-# MemGraph: Graph vs Flat Agentic Memory for Long-Term Personalization
+# MemGraph: Inspectable Personal Memory
 
-**Question:** Does a knowledge-graph memory with consolidation (new facts supersede stale ones) beat flat
-vector-style retrieval at long-horizon personalization?
+A research prototype asking: **when a person's facts change, which memory mechanisms reduce stale retrieved context?** Python/FastAPI, SQLite, React and Vite. Gemini is optional; the demo and benchmark work offline.
 
-## Components
-- `backend/llm.py`: one interface for **Gemini, OpenAI, Anthropic** (REST) plus offline `mock` mode.
-- `backend/memory.py`: `FlatMemory` (baseline) vs `GraphMemory` (entities, relations, consolidation, recency, supersession).
-- `backend/evaluate.py`: simulated users whose facts change across sessions; metrics: **accuracy** (current fact retrieved, no stale
-  fact) and **stale rate** (outdated fact leaked into context).
-- `backend/app.py`: FastAPI. `frontend/`: React UI (chat, live graph, benchmark).
+## Implemented
 
-## Run (no Docker)
-Python 3.10+ and Node 18+. Run `./run.sh` (Mac/Linux) or `run.bat` (Windows). Open http://localhost:5173.
-Pick a provider in the UI and paste a key, or copy `.env.example` to `.env`. Free Gemini key: aistudio.google.com.
-CLI: `python run_eval.py --provider gemini --users 20` (writes `results.json`).
+- Lexical baseline: bag-of-words cosine retrieval of original messages, not semantic embeddings.
+- Latest-value dictionary: current functional facts, sharing extraction and ranking with graph memory.
+- Graph memory: triples, supersession, duplicate reinforcement, recency, and inactive historical edges. The graph is reconstructed from SQLite events; this is not a graph database or multi-hop GraphRAG engine.
+- Ablations: no supersession, no recency, no relation matching.
+- Memory inspection, corrections through chat, explicit retractions, and Forget controls.
+- SQLite persistence scoped to a random HTTP-only browser-session cookie. Reset clears only that session.
+- Explicit extraction and generation status. LLM extraction errors fail visibly rather than silently falling back to rules.
 
-## Results (mock/rule extractor, 50 simulated users, 8 sessions, k=3)
-| Memory | Accuracy | Stale rate |
-|---|---|---|
-| flat | 30% | 61% |
-| graph | 100% | 0% |
+## Run
 
-**Caveat (be honest in interviews):** this benchmark is synthetic and templated, so graph memory has an easy win. The real
-test is `--provider gemini|openai|anthropic`, where an LLM does the extraction on noisier text.
+Requires Python 3.10+ and Node.js 18+.
 
-## Next steps (do these to make it research-grade)
-1. Replace templated personas with LLM-generated personas and paraphrased utterances; add multi-hop questions.
-2. Real embeddings (Gemini/OpenAI) for the flat baseline, so it's a fair comparison.
-3. Ablate: no consolidation, no recency, no supersession. Compare extraction across providers.
-4. Evaluate on LoCoMo / LongMemEval. 5. Small user study (5-10 people). 6. Write a 2-page report.
+Windows PowerShell:
 
-## Resume bullets (fill in your real numbers after running with an LLM)
-- Built MemGraph, a knowledge-graph agentic memory system (Python/FastAPI, React) with fact consolidation and supersession, supporting Gemini, OpenAI and Anthropic backends.
-- Designed a simulated-user benchmark for long-term personalization; graph memory improved current-fact accuracy from X% to Y% and cut stale-fact leakage from A% to B% versus a flat retrieval baseline.
+```powershell
+.\run.ps1
+```
+
+In a second terminal:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+macOS/Linux: `bash run.sh` starts both processes. Open http://localhost:5173. Backend: http://localhost:8000.
+
+Manual setup: create a virtual environment, install `backend/requirements.txt`, install frontend packages with `npm install`, then run `python -m uvicorn backend.app:app --reload --port 8000` and the frontend dev server in separate terminals.
+
+Copy `.env.example` to `.env` only if needed. Default extraction is `MEMGRAPH_EXTRACTION=rules`. Set `GEMINI_API_KEY` and `GEMINI_MODEL` to an available model in your account for live responses. Set `MEMGRAPH_EXTRACTION=llm` for LLM extraction in chat. The benchmark selects its extraction mode explicitly. Only Gemini is integrated.
+
+Try: "I live in Pune." -> "I moved to Delhi." -> "Where do I live?" -> "I no longer live in Delhi."
+
+## Evaluation
+
+```powershell
+python run_eval.py --users 50 --sessions 8 --k 3 --seed 0
+python run_eval.py --extraction llm --model YOUR_MODEL --users 5 --output results-llm.json
+python -m unittest discover -s tests -v
+```
+
+The CLI writes results only after successful completion. LLM runs make external API calls and require credentials. Each utterance is extracted once and shared across methods. All methods receive the same top-k limit and maximum context-word budget (`--max-context-words`, default 80).
+
+The default experiment uses 50 synthetic users, 8 sessions and four changing personal attributes. **Current-fact retrieval accuracy** means context contains the current value and no outdated value. Stale rate measures outdated values in context. Context length is words, not model tokens. Neither metric measures generated-answer quality.
+
+`results.json` contains counts, descriptive Wilson intervals, configuration, extraction counts, ablations, failure examples and a separate eight-case language diagnostic. Query-level intervals ignore within-user dependence and do not establish population-level significance. The hand-authored diagnostics include an intentionally unsupported paraphrase to expose rule limits.
+
+See [research/report.md](research/report.md) for results and [research/user-study.md](research/user-study.md) for a proposed pilot. No completed user study or external benchmark result is claimed.
+
+## Memory controls and limits
+
+Corrections supersede city, employer and favorite values. Likes and allergies support multiple values. Retractions support "I no longer live in ...", "I no longer work at ...", "I no longer like ...", and "I am no longer allergic to ...". Rules cover narrow first-person templates, not arbitrary language, temporal reasoning or entity resolution.
+
+Forget deletes source turns, including other facts in those turns. For single-valued relations it clears the relation's source history to prevent old values returning. Reset deletes the session's event records. Backup deletion and forensic erasure are outside the prototype's scope.
+
+The cookie is a local browser-session boundary, not account authentication. People sharing a browser profile share memory. Clearing cookies loses access to a session; its rows remain until removed. The database is local and unencrypted. Use synthetic data for demos. Public deployment requires authentication, TLS, retention controls, request limits and backup policies. Evaluation is synchronous; LLM runs can take time.
+
+Semantic embedding retrieval, external datasets, multi-hop retrieval, generated-answer evaluation and a completed user study remain future work.
+
+## Accurate application description
+
+Built an interactive personal-memory research prototype with persistent session-scoped storage, fact supersession, inspectable memory and deletion controls; evaluated lexical retrieval, a latest-value baseline and memory ablations on synthetic conversations, documenting limitations and failure cases.

@@ -1,18 +1,661 @@
 {
   "flat": {
     "accuracy": 0.3,
-    "stale_rate": 0.5,
-    "avg_context_words": 8.9
+    "current_fact_retrieval_accuracy": 0.3,
+    "stale_rate": 0.61,
+    "avg_context_words": 9.9,
+    "queries": 200,
+    "correct": 60,
+    "accuracy_interval_95_descriptive": [
+      0.2407,
+      0.3668
+    ]
+  },
+  "latest": {
+    "accuracy": 1.0,
+    "current_fact_retrieval_accuracy": 1.0,
+    "stale_rate": 0.0,
+    "avg_context_words": 6.0,
+    "queries": 200,
+    "correct": 200,
+    "accuracy_interval_95_descriptive": [
+      0.9812,
+      1
+    ]
   },
   "graph": {
     "accuracy": 1.0,
+    "current_fact_retrieval_accuracy": 1.0,
     "stale_rate": 0.0,
-    "avg_context_words": 4.0
+    "avg_context_words": 6.0,
+    "queries": 200,
+    "correct": 200,
+    "accuracy_interval_95_descriptive": [
+      0.9812,
+      1
+    ]
+  },
+  "graph_no_supersession": {
+    "accuracy": 0.275,
+    "current_fact_retrieval_accuracy": 0.275,
+    "stale_rate": 0.725,
+    "avg_context_words": 10.0,
+    "queries": 200,
+    "correct": 55,
+    "accuracy_interval_95_descriptive": [
+      0.2178,
+      0.3407
+    ]
+  },
+  "graph_no_recency": {
+    "accuracy": 1.0,
+    "current_fact_retrieval_accuracy": 1.0,
+    "stale_rate": 0.0,
+    "avg_context_words": 6.0,
+    "queries": 200,
+    "correct": 200,
+    "accuracy_interval_95_descriptive": [
+      0.9812,
+      1
+    ]
+  },
+  "graph_no_relation_matching": {
+    "accuracy": 1.0,
+    "current_fact_retrieval_accuracy": 1.0,
+    "stale_rate": 0.0,
+    "avg_context_words": 6.0,
+    "queries": 200,
+    "correct": 200,
+    "accuracy_interval_95_descriptive": [
+      0.9812,
+      1
+    ]
   },
   "config": {
-    "users": 5,
+    "users": 50,
     "sessions": 8,
     "k": 3,
-    "model": "gemini-3.8-flash"
-  }
+    "model": null,
+    "extraction": "rules",
+    "extraction_counts": {
+      "rules": 1131
+    },
+    "fallback_count": 0,
+    "seed": 0,
+    "max_context_words": 80,
+    "metric": "retrieved context contains current value and no stale value",
+    "limitation": "Templated synthetic data; retrieval only, not generated answer quality. Query intervals ignore within-user dependence."
+  },
+  "challenge_suite": {
+    "description": "Hand-authored diagnostics, including an unsupported paraphrase; not held-out research evidence.",
+    "extraction_calls": 16,
+    "methods": {
+      "flat": {
+        "passed": 1,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": false,
+            "context": "i live in pune. i no longer live in pune.",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": false,
+            "context": "i live in pune. i live in delhi. i live in pune.",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": false,
+            "context": "i live in pune. my friend says i live in mumbai.",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": false,
+            "context": "i live in pune. i used to live in delhi.",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": false,
+            "context": "i work at infosys. if i work at google, i will move.",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "i live in pune.",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": false,
+            "context": "my favorite food is pizza. my favorite food is dosa.",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      },
+      "latest": {
+        "passed": 7,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": true,
+            "context": "",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": true,
+            "context": "user works at infosys",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "user lives in pune",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": true,
+            "context": "user favorite food dosa",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      },
+      "graph": {
+        "passed": 7,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": true,
+            "context": "",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": true,
+            "context": "user works at infosys",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "user lives in pune",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": true,
+            "context": "user favorite food dosa",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      },
+      "graph_no_supersession": {
+        "passed": 5,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": true,
+            "context": "",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": false,
+            "context": "user lives in pune user lives in delhi",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": true,
+            "context": "user works at infosys",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "user lives in pune",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": false,
+            "context": "user favorite food dosa user favorite food pizza",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      },
+      "graph_no_recency": {
+        "passed": 7,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": true,
+            "context": "",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": true,
+            "context": "user works at infosys",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "user lives in pune",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": true,
+            "context": "user favorite food dosa",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      },
+      "graph_no_relation_matching": {
+        "passed": 7,
+        "total": 8,
+        "cases": [
+          {
+            "name": "explicit retraction",
+            "passed": true,
+            "context": "",
+            "expected": null
+          },
+          {
+            "name": "return to previous value",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "third-party attribution",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "historical statement",
+            "passed": true,
+            "context": "user lives in pune",
+            "expected": "pune"
+          },
+          {
+            "name": "hypothetical",
+            "passed": true,
+            "context": "user works at infosys",
+            "expected": "infosys"
+          },
+          {
+            "name": "unseen paraphrase",
+            "passed": false,
+            "context": "user lives in pune",
+            "expected": "delhi"
+          },
+          {
+            "name": "preference revision",
+            "passed": true,
+            "context": "user favorite food dosa",
+            "expected": "dosa"
+          },
+          {
+            "name": "unknown fact",
+            "passed": true,
+            "context": "",
+            "expected": null
+          }
+        ]
+      }
+    }
+  },
+  "failures": [
+    {
+      "user_seed": 0,
+      "memory": "flat",
+      "query": "Where do I live these days?",
+      "expected": "pune",
+      "context": "",
+      "stale": false
+    },
+    {
+      "user_seed": 0,
+      "memory": "flat",
+      "query": "Which company do I work at now?",
+      "expected": "google",
+      "context": "",
+      "stale": false
+    },
+    {
+      "user_seed": 0,
+      "memory": "flat",
+      "query": "What is my favorite food?",
+      "expected": "dosa",
+      "context": "my favorite food is biryani. my favorite food is dosa. my favorite sport is football.",
+      "stale": true
+    },
+    {
+      "user_seed": 0,
+      "memory": "graph_no_supersession",
+      "query": "Where do I live these days?",
+      "expected": "pune",
+      "context": "user lives in pune user lives in mumbai user lives in chennai",
+      "stale": true
+    },
+    {
+      "user_seed": 0,
+      "memory": "graph_no_supersession",
+      "query": "Which company do I work at now?",
+      "expected": "google",
+      "context": "user works at google user works at swiggy",
+      "stale": true
+    },
+    {
+      "user_seed": 0,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite food?",
+      "expected": "dosa",
+      "context": "user favorite food dosa user favorite food biryani user favorite sport football",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "flat",
+      "query": "Where do I live these days?",
+      "expected": "chennai",
+      "context": "i live in delhi. i live in chennai.",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "flat",
+      "query": "What is my favorite food?",
+      "expected": "pizza",
+      "context": "my favorite food is biryani. my favorite food is pizza. my favorite sport is football.",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "flat",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "my favorite sport is football. my favorite sport is tennis. my favorite sport is football.",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "graph_no_supersession",
+      "query": "Where do I live these days?",
+      "expected": "chennai",
+      "context": "user lives in chennai user lives in hyderabad user lives in delhi",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "graph_no_supersession",
+      "query": "Which company do I work at now?",
+      "expected": "google",
+      "context": "user works at google user works at razorpay",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite food?",
+      "expected": "pizza",
+      "context": "user favorite food pizza user favorite food biryani user favorite sport football",
+      "stale": true
+    },
+    {
+      "user_seed": 1,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "user favorite sport football user favorite sport chess user favorite sport tennis",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "flat",
+      "query": "Where do I live these days?",
+      "expected": "mumbai",
+      "context": "i live in pune.",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "flat",
+      "query": "Which company do I work at now?",
+      "expected": "infosys",
+      "context": "",
+      "stale": false
+    },
+    {
+      "user_seed": 2,
+      "memory": "flat",
+      "query": "What is my favorite food?",
+      "expected": "pizza",
+      "context": "my favorite food is biryani. my favorite food is pasta. my favorite food is pizza.",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "flat",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "my favorite sport is football. my favorite sport is chess. my favorite food is biryani.",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "graph_no_supersession",
+      "query": "Where do I live these days?",
+      "expected": "mumbai",
+      "context": "user lives in mumbai user lives in pune",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite food?",
+      "expected": "pizza",
+      "context": "user favorite food pizza user favorite food pasta user favorite food biryani",
+      "stale": true
+    },
+    {
+      "user_seed": 2,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "user favorite sport chess user favorite sport football user favorite food pizza",
+      "stale": true
+    },
+    {
+      "user_seed": 3,
+      "memory": "flat",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "my favorite sport is tennis. my favorite sport is chess. my favorite food is pasta.",
+      "stale": true
+    },
+    {
+      "user_seed": 3,
+      "memory": "graph_no_supersession",
+      "query": "Where do I live these days?",
+      "expected": "chennai",
+      "context": "user lives in chennai user lives in delhi",
+      "stale": true
+    },
+    {
+      "user_seed": 3,
+      "memory": "graph_no_supersession",
+      "query": "Which company do I work at now?",
+      "expected": "swiggy",
+      "context": "user works at swiggy user works at google user works at razorpay",
+      "stale": true
+    },
+    {
+      "user_seed": 3,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite sport?",
+      "expected": "chess",
+      "context": "user favorite sport chess user favorite sport tennis user favorite food pasta",
+      "stale": true
+    },
+    {
+      "user_seed": 4,
+      "memory": "flat",
+      "query": "Where do I live these days?",
+      "expected": "chennai",
+      "context": "",
+      "stale": false
+    },
+    {
+      "user_seed": 4,
+      "memory": "flat",
+      "query": "What is my favorite food?",
+      "expected": "pasta",
+      "context": "my favorite food is biryani. my favorite food is pizza. my favorite food is biryani.",
+      "stale": true
+    },
+    {
+      "user_seed": 4,
+      "memory": "flat",
+      "query": "What is my favorite sport?",
+      "expected": "tennis",
+      "context": "my favorite sport is chess. my favorite sport is tennis. my favorite food is biryani.",
+      "stale": true
+    },
+    {
+      "user_seed": 4,
+      "memory": "graph_no_supersession",
+      "query": "Where do I live these days?",
+      "expected": "chennai",
+      "context": "user lives in chennai user lives in delhi",
+      "stale": true
+    },
+    {
+      "user_seed": 4,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite food?",
+      "expected": "pasta",
+      "context": "user favorite food biryani user favorite food pasta user favorite food pizza",
+      "stale": true
+    },
+    {
+      "user_seed": 4,
+      "memory": "graph_no_supersession",
+      "query": "What is my favorite sport?",
+      "expected": "tennis",
+      "context": "user favorite sport tennis user favorite sport chess user favorite food biryani",
+      "stale": true
+    }
+  ]
 }
