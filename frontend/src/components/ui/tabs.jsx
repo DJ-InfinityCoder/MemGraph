@@ -30,3 +30,4 @@ export function TabsTrigger({ className, active, children, onClick, ...props }) 
     </button>
   );
 }
+

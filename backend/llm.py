@@ -1,36 +1,33 @@
-"""Unified LLM client: gemini | openai | anthropic | mock. Uses plain REST (httpx)."""
+"""Gemini client for Gemini 3.8 Flash using REST (httpx)."""
 import os
-DEFAULTS = {"gemini": "gemini-3.8-flash", "openai": "gpt-4o-mini", "anthropic": "claude-haiku-4-5", "mock": "mock"}
-ENV_KEYS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
-def chat(prompt, system="", provider="mock", model=None, api_key=None, timeout=60):
-    provider = (provider or "mock").lower()
-    if provider == "mock":
-        return ""  # callers fall back to rule-based logic
+DEFAULT_MODEL = "gemini-3.8-flash"
+
+def chat(prompt, system="", model=DEFAULT_MODEL, api_key=None, timeout=60):
+    """Execute chat completion with Gemini 3.8 Flash."""
     import httpx
-    model = model or DEFAULTS[provider]
-    key = api_key or os.getenv(ENV_KEYS[provider], "")
+    model = model or DEFAULT_MODEL
+    key = api_key or os.getenv("GEMINI_API_KEY", "")
     if not key:
-        raise ValueError(f"No API key for {provider}. Set {ENV_KEYS[provider]} in .env or paste it in the UI.")
-    if provider == "gemini":
-        r = httpx.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-            params={"key": key}, timeout=timeout,
-            json={"systemInstruction": {"parts": [{"text": system}]},
-                  "contents": [{"role": "user", "parts": [{"text": prompt}]}]})
-        r.raise_for_status()
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    if provider == "openai":
-        r = httpx.post("https://api.openai.com/v1/chat/completions", timeout=timeout,
-            headers={"Authorization": f"Bearer {key}"},
-            json={"model": model, "messages": [{"role": "system", "content": system},
-                                               {"role": "user", "content": prompt}]})
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
-    if provider == "anthropic":
-        r = httpx.post("https://api.anthropic.com/v1/messages", timeout=timeout,
-            headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
-            json={"model": model, "max_tokens": 1000, "system": system,
-                  "messages": [{"role": "user", "content": prompt}]})
-        r.raise_for_status()
-        return r.json()["content"][0]["text"]
-    raise ValueError(f"Unknown provider {provider}")
+        raise ValueError("GEMINI_API_KEY is not set. Please add it to your .env file.")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}]
+    }
+    if system:
+        payload["systemInstruction"] = {"parts": [{"text": system}]}
+
+    r = httpx.post(url, params={"key": key}, timeout=timeout, json=payload)
+    r.raise_for_status()
+    data = r.json()
+    candidates = data.get("candidates", [])
+    if candidates and "content" in candidates[0]:
+        parts = candidates[0]["content"].get("parts", [])
+        if parts:
+            # Filter out thinking process parts to get only final model response
+            texts = [p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)]
+            if texts:
+                return "".join(texts)
+            return parts[-1].get("text", "")
+    return ""

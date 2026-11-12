@@ -1,8 +1,8 @@
 {
   "flat": {
     "accuracy": 0.3,
-    "stale_rate": 0.61,
-    "avg_context_words": 9.9
+    "stale_rate": 0.5,
+    "avg_context_words": 8.9
   },
   "graph": {
     "accuracy": 1.0,
@@ -10,9 +10,9 @@
     "avg_context_words": 4.0
   },
   "config": {
-    "users": 50,
+    "users": 5,
     "sessions": 8,
     "k": 3,
-    "provider": "mock"
+    "model": "gemini-3.8-flash"
   }
 }

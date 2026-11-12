@@ -25,7 +25,7 @@ def make_persona(seed, n_sessions=8):
         sessions.append(turns)
     return sessions, truth, history
 
-def run_eval(n_users=20, n_sessions=8, k=3, provider="mock", model=None, api_key=None):
+def run_eval(n_users=20, n_sessions=8, k=3, model="gemini-3.8-flash", api_key=None):
     stats = {m: {"correct": 0, "stale": 0, "total": 0, "ctx": 0} for m in ("flat", "graph")}
     for seed in range(n_users):
         sessions, truth, history = make_persona(seed, n_sessions)
@@ -33,7 +33,7 @@ def run_eval(n_users=20, n_sessions=8, k=3, provider="mock", model=None, api_key
             t = 0
             for sess in sessions:
                 for utt in sess:
-                    t += 1; mem.add(extract_facts(utt, provider, model, api_key), utt, t)
+                    t += 1; mem.add(extract_facts(utt, model=model, api_key=api_key), utt, t)
             for rel, ans in truth.items():
                 ctx = " ".join(mem.retrieve(ASK[rel], k)).lower()
                 s = stats[mem.name]; s["total"] += 1; s["ctx"] += len(ctx.split())
@@ -41,4 +41,4 @@ def run_eval(n_users=20, n_sessions=8, k=3, provider="mock", model=None, api_key
                 s["correct"] += hit and not stale; s["stale"] += stale
     return {m: {"accuracy": round(s["correct"] / s["total"], 3), "stale_rate": round(s["stale"] / s["total"], 3),
                 "avg_context_words": round(s["ctx"] / s["total"], 1)} for m, s in stats.items()} | \
-           {"config": {"users": n_users, "sessions": n_sessions, "k": k, "provider": provider}}
+           {"config": {"users": n_users, "sessions": n_sessions, "k": k, "model": model}}

@@ -3,15 +3,11 @@ import {
   MessageSquare,
   Network,
   BarChart3,
-  Key,
   RefreshCw,
   Trash2,
   Send,
-  CheckCircle2,
-  AlertCircle,
   ShieldCheck,
-  Eye,
-  EyeOff,
+  AlertCircle,
   ExternalLink,
   Layers,
   Zap,
@@ -21,7 +17,8 @@ import {
   Cpu,
   ArrowRight,
   Database,
-  History
+  History,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./components/ui/card";
@@ -42,86 +39,44 @@ const api = (path, body) =>
   });
 
 /* -------------------------------------------------------------------------- */
-/* Settings & Model Header                                                    */
+/* Dedicated Gemini 3.8 Flash Model Banner                                   */
 /* -------------------------------------------------------------------------- */
-function Settings({ cfg, setCfg }) {
-  const [defs, setDefs] = useState({ providers: ["mock", "gemini", "openai", "anthropic"], defaults: {} });
-  const [showKey, setShowKey] = useState(false);
-
-  useEffect(() => {
-    api("/providers")
-      .then(setDefs)
-      .catch(() => {});
-  }, []);
-
-  const set = (k) => (e) => setCfg({ ...cfg, [k]: e.target.value });
-
+function ModelHero({ status }) {
   return (
     <Card className="border-zinc-800 bg-zinc-950/80 mb-6 backdrop-blur-md">
       <CardContent className="p-4 md:p-5">
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Provider Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-zinc-300" /> Provider:
-              </span>
-              <select
-                className="h-9 px-3 rounded-lg border border-zinc-800 bg-zinc-900 text-white text-xs md:text-sm font-medium focus:outline-none focus:ring-1 focus:ring-zinc-400 cursor-pointer"
-                value={cfg.provider}
-                onChange={(e) =>
-                  setCfg({
-                    ...cfg,
-                    provider: e.target.value,
-                    model: defs.defaults[e.target.value] || "",
-                  })
-                }
-              >
-                {defs.providers.map((p) => (
-                  <option key={p} value={p}>
-                    {p.toUpperCase()} {p === "mock" ? "(Offline / Zero-Config)" : ""}
-                  </option>
-                ))}
-              </select>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold shadow-sm">
+              <Sparkles className="w-5 h-5 fill-black" />
             </div>
-
-            {/* Model Name */}
-            <div className="flex items-center gap-2 flex-1 md:flex-initial">
-              <Input
-                placeholder={`Model (default: ${defs.defaults[cfg.provider] || "mock"})`}
-                value={cfg.model || ""}
-                onChange={set("model")}
-                className="w-full md:w-48 text-xs font-mono"
-              />
-            </div>
-
-            {/* API Key */}
-            {cfg.provider !== "mock" && (
-              <div className="relative flex items-center w-full md:w-64">
-                <Input
-                  type={showKey ? "text" : "password"}
-                  placeholder="API key (or set in .env)"
-                  value={cfg.api_key || ""}
-                  onChange={set("api_key")}
-                  className="pr-9 text-xs font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 text-zinc-400 hover:text-white transition-colors"
-                >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm md:text-base font-bold text-white tracking-tight font-mono">
+                  Gemini 3.8 Flash
+                </span>
+                <Badge variant="default" className="text-[10px] font-mono py-0 px-2 bg-white text-black font-semibold">
+                  ACTIVE MODEL
+                </Badge>
               </div>
-            )}
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Google DeepMind's workhorse agentic model • 1,048,576 Token Context • Structured Reasoning
+              </p>
+            </div>
           </div>
 
-          {/* Current Engine Badge */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-mono text-zinc-400">
-              Active: <span className="text-white font-semibold">{cfg.provider}</span>
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 text-xs font-mono">
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  status?.configured ? "bg-white animate-pulse" : "bg-zinc-600"
+                )}
+              />
+              <span className="text-zinc-300">
+                {status?.configured ? "Backend Key Active (.env)" : "Local Simulation Mode"}
+              </span>
+            </div>
           </div>
         </div>
       </CardContent>
@@ -132,7 +87,7 @@ function Settings({ cfg, setCfg }) {
 /* -------------------------------------------------------------------------- */
 /* Chat & Memory Interface                                                    */
 /* -------------------------------------------------------------------------- */
-function Chat({ cfg, onUpdate }) {
+function Chat({ onUpdate }) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [memory, setMemory] = useState("graph");
@@ -156,11 +111,15 @@ function Chat({ cfg, onUpdate }) {
     setErr("");
     setLoading(true);
 
-    const userMsg = { role: "you", text: promptToSend, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    const userMsg = {
+      role: "you",
+      text: promptToSend,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
     setMsgs((x) => [...x, userMsg]);
 
     try {
-      const r = await api("/chat", { ...cfg, message: promptToSend, memory });
+      const r = await api("/chat", { message: promptToSend, memory });
       setMsgs((x) => [
         ...x,
         {
@@ -168,7 +127,8 @@ function Chat({ cfg, onUpdate }) {
           text: r.reply,
           retrieved: r.retrieved,
           facts: r.facts,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          model: r.model || "gemini-3.8-flash",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
       onUpdate();
@@ -193,7 +153,7 @@ function Chat({ cfg, onUpdate }) {
     { label: "Step 1: Declare fact", query: "I live in Pune." },
     { label: "Step 2: Update fact", query: "I moved to Delhi." },
     { label: "Step 3: Test query", query: "Where do I live?" },
-    { label: "Step 4: New attribute", query: "My primary language is TypeScript." },
+    { label: "Step 4: Add preference", query: "I love black coffee." },
   ];
 
   return (
@@ -204,7 +164,7 @@ function Chat({ cfg, onUpdate }) {
           {/* Chat Controls Bar */}
           <div className="flex flex-wrap items-center justify-between p-4 border-b border-zinc-800/80 gap-3">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Memory Mode:</span>
+              <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Memory Engine:</span>
               <div className="flex items-center rounded-lg border border-zinc-800 bg-zinc-900/90 p-1">
                 <button
                   onClick={() => setMemory("graph")}
@@ -251,9 +211,9 @@ function Chat({ cfg, onUpdate }) {
                 <div className="w-12 h-12 rounded-full border border-zinc-800 bg-zinc-950 flex items-center justify-center mb-3 text-zinc-300">
                   <Database className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-semibold text-white mb-1">Knowledge Memory Ready</h4>
+                <h4 className="text-base font-semibold text-white mb-1">Gemini Agentic Memory Ready</h4>
                 <p className="text-xs text-zinc-400 max-w-sm mb-5 leading-relaxed">
-                  Send statements to populate memory. Graph memory consolidates conflicting facts and supersedes stale history.
+                  Powered by Gemini 3.8 Flash. Give statements to dynamically extract knowledge triples and test supersession.
                 </p>
 
                 <div className="w-full max-w-md grid grid-cols-2 gap-2 text-left">
@@ -284,7 +244,7 @@ function Chat({ cfg, onUpdate }) {
                   )}
                 >
                   <div className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-500 px-1">
-                    <span>{m.role === "you" ? "USER" : "AGENT"}</span>
+                    <span>{m.role === "you" ? "USER" : "GEMINI 3.8 FLASH"}</span>
                     <span>•</span>
                     <span>{m.timestamp}</span>
                   </div>
@@ -339,7 +299,7 @@ function Chat({ cfg, onUpdate }) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-              placeholder='Type a fact or query (e.g. "I moved to Delhi.", "Where do I live?")...'
+              placeholder='Try stating "I live in Pune", then "I moved to Delhi", then ask "Where do I live?"...'
               className="flex-1 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500 h-10"
               disabled={loading}
             />
@@ -361,35 +321,31 @@ function Chat({ cfg, onUpdate }) {
         </Card>
       </div>
 
-      {/* Side Quick Guide Column */}
+      {/* Side Quick Protocol Column */}
       <div className="lg:col-span-1 space-y-4">
         <Card className="border-zinc-800 bg-zinc-950/60">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
               <Info className="w-4 h-4 text-zinc-300" />
-              Experiment Protocol
+              Long-Horizon Personalization
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-xs text-zinc-400 leading-relaxed">
             <div>
-              <span className="font-semibold text-white block mb-0.5">1. Stale Fact Test</span>
-              Tell the agent <code className="text-white bg-zinc-900 px-1 py-0.5 rounded">I live in Pune.</code>, then update with <code className="text-white bg-zinc-900 px-1 py-0.5 rounded">I moved to Delhi.</code>
+              <span className="font-semibold text-white block mb-0.5">Consolidation Engine</span>
+              When Gemini extracts new assertions about an entity (e.g. city or company), the graph engine detects functional supersession and flags conflicting older edges as inactive.
             </div>
             <div>
-              <span className="font-semibold text-white block mb-0.5">2. Query</span>
-              Ask <code className="text-white bg-zinc-900 px-1 py-0.5 rounded">Where do I live?</code>
-            </div>
-            <div>
-              <span className="font-semibold text-white block mb-0.5">3. Compare Engines</span>
-              In <b>Flat</b> mode, both Pune & Delhi leak into the context window. In <b>Graph</b> mode, Pune is superseded and only Delhi is retrieved.
+              <span className="font-semibold text-white block mb-0.5">Eliminating Stale Hallucinations</span>
+              Flat vector memory retrieves both past and present facts if lexical similarity is high. Graph memory retrieves solely active nodes.
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-zinc-800 bg-zinc-950/60 p-4">
           <div className="flex items-center justify-between text-xs text-zinc-400">
-            <span>Knowledge Graph Edges</span>
-            <span className="font-mono text-white">Live Sync</span>
+            <span>Model Backend</span>
+            <span className="font-mono text-white">Gemini 3.8 Flash</span>
           </div>
         </Card>
       </div>
@@ -419,7 +375,6 @@ function Graph({ tick }) {
   const n = g.nodes.length;
   const pos = {};
 
-  // Center user, arrange entities in an orbit
   g.nodes.forEach((nd, i) => {
     if (nd.id === "user") {
       pos[nd.id] = [320, 180];
@@ -480,7 +435,6 @@ function Graph({ tick }) {
           </div>
         ) : (
           <div className="w-full relative rounded-xl border border-zinc-850 bg-black/80 overflow-hidden">
-            {/* Background Grid Pattern */}
             <div
               className="absolute inset-0 pointer-events-none opacity-20"
               style={{
@@ -515,7 +469,7 @@ function Graph({ tick }) {
                 </marker>
               </defs>
 
-              {/* Render Edges */}
+              {/* Edges */}
               {g.edges.map((e, i) => {
                 if (!pos[e.source] || !pos[e.target]) return null;
                 const [x1, y1] = pos[e.source];
@@ -535,7 +489,6 @@ function Graph({ tick }) {
                       strokeDasharray={e.active ? "" : "4 4"}
                       markerEnd={e.active ? "url(#arrow-active)" : "url(#arrow-stale)"}
                     />
-                    {/* Edge Label Badge */}
                     <g transform={`translate(${midX}, ${midY})`}>
                       <rect
                         x="-30"
@@ -562,7 +515,7 @@ function Graph({ tick }) {
                 );
               })}
 
-              {/* Render Nodes */}
+              {/* Nodes */}
               {g.nodes.map((nd) => {
                 if (!pos[nd.id]) return null;
                 const [cx, cy] = pos[nd.id];
@@ -570,7 +523,6 @@ function Graph({ tick }) {
 
                 return (
                   <g key={nd.id} transform={`translate(${cx}, ${cy})`}>
-                    {/* Outer glow for user node */}
                     {isUser && (
                       <circle
                         r="16"
@@ -603,7 +555,6 @@ function Graph({ tick }) {
               })}
             </svg>
 
-            {/* Canvas Legend */}
             <div className="p-3 border-t border-zinc-800 bg-zinc-950/90 flex flex-wrap items-center justify-between text-xs text-zinc-400 gap-4">
               <div className="flex items-center gap-5">
                 <span className="flex items-center gap-2">
@@ -616,7 +567,7 @@ function Graph({ tick }) {
                 </span>
               </div>
               <span className="font-mono text-[11px] text-zinc-500">
-                Consolidation algorithm: Recency-weighted triple matching
+                Extracted via Gemini 3.8 Flash
               </span>
             </div>
           </div>
@@ -629,7 +580,7 @@ function Graph({ tick }) {
 /* -------------------------------------------------------------------------- */
 /* Benchmark & Evaluation Suite                                               */
 /* -------------------------------------------------------------------------- */
-function Evaluate({ cfg }) {
+function Evaluate() {
   const [res, setRes] = useState(null);
   const [users, setUsers] = useState(30);
   const [busy, setBusy] = useState(false);
@@ -639,7 +590,7 @@ function Evaluate({ cfg }) {
     setBusy(true);
     setErr("");
     try {
-      const data = await api("/eval", { ...cfg, users });
+      const data = await api("/eval", { users });
       setRes(data);
     } catch (e) {
       setErr(e.message);
@@ -659,7 +610,7 @@ function Evaluate({ cfg }) {
                 Benchmark Suite: Long-Horizon Persona Evaluation
               </CardTitle>
               <CardDescription className="text-zinc-400 mt-1">
-                Simulates user sessions over time where facts evolve. Evaluates current fact accuracy vs stale fact leakage.
+                Evaluates Graph Memory against Flat Vector Memory across multi-session evolved persona benchmarks.
               </CardDescription>
             </div>
 
@@ -709,7 +660,6 @@ function Evaluate({ cfg }) {
             <div className="space-y-6">
               {/* Metric Hero Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Accuracy */}
                 <Card className="border-zinc-800 bg-zinc-900/40 p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono uppercase text-zinc-400">Accuracy (↑)</span>
@@ -737,7 +687,6 @@ function Evaluate({ cfg }) {
                   </div>
                 </Card>
 
-                {/* Stale Rate */}
                 <Card className="border-zinc-800 bg-zinc-900/40 p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono uppercase text-zinc-400">Stale Leakage (↓)</span>
@@ -765,7 +714,6 @@ function Evaluate({ cfg }) {
                   </div>
                 </Card>
 
-                {/* Context Overhead */}
                 <Card className="border-zinc-800 bg-zinc-900/40 p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-mono uppercase text-zinc-400">Avg Context Size</span>
@@ -800,7 +748,7 @@ function Evaluate({ cfg }) {
                       <th className="py-3 px-4 font-semibold">Accuracy (Current Fact)</th>
                       <th className="py-3 px-4 font-semibold">Stale Rate (Leaked)</th>
                       <th className="py-3 px-4 font-semibold">Avg Context Words</th>
-                      <th className="py-3 px-4 font-semibold">Consolidation Engine</th>
+                      <th className="py-3 px-4 font-semibold">Model</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800/80 font-mono text-xs">
@@ -820,7 +768,7 @@ function Evaluate({ cfg }) {
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant="default" className="text-[10px]">
-                          Active (Enabled)
+                          gemini-3.8-flash
                         </Badge>
                       </td>
                     </tr>
@@ -840,18 +788,12 @@ function Evaluate({ cfg }) {
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant="outline" className="text-[10px] text-zinc-500 border-zinc-800">
-                          None (Recency only)
+                          Baseline
                         </Badge>
                       </td>
                     </tr>
                   </tbody>
                 </table>
-              </div>
-
-              {/* Research Footnote */}
-              <div className="p-4 rounded-xl border border-zinc-800/80 bg-zinc-900/20 text-xs text-zinc-400 leading-relaxed">
-                <span className="font-semibold text-white block mb-1">Empirical Summary:</span>
-                Knowledge-graph memory with entity resolution and relation supersession eliminates outdated facts from prompt contexts, guaranteeing that subsequent contradictory assertions (e.g. city relocations, job changes, preference shifts) consistently overwrite previous entries rather than polluting retrieval results.
               </div>
             </div>
           ) : (
@@ -859,7 +801,7 @@ function Evaluate({ cfg }) {
               <BarChart3 className="w-10 h-10 text-zinc-600 mb-3" />
               <p className="text-sm font-medium text-zinc-300">No benchmark run in this session</p>
               <p className="text-xs text-zinc-500 mt-1 max-w-sm">
-                Click "Run Benchmark" above to run the synthetic multi-session persona evaluation across {users} simulated users.
+                Click "Run Benchmark" above to test persona evaluation across {users} simulated users with Gemini 3.8 Flash.
               </p>
             </div>
           )}
@@ -875,7 +817,13 @@ function Evaluate({ cfg }) {
 export default function App() {
   const [tab, setTab] = useState("chat");
   const [tick, setTick] = useState(0);
-  const [cfg, setCfg] = useState({ provider: "mock" });
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    api("/status")
+      .then(setStatus)
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black font-sans pb-16">
@@ -892,11 +840,11 @@ export default function App() {
                   MemGraph
                 </span>
                 <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-zinc-800 text-zinc-400 font-mono">
-                  v0.2.0
+                  Gemini 3.8 Flash
                 </Badge>
               </div>
               <p className="text-[11px] text-zinc-400 hidden sm:block">
-                Graph vs Flat Agentic Memory for Long-Term Personalization
+                Long-Horizon Knowledge Graph Memory Engine
               </p>
             </div>
           </div>
@@ -917,8 +865,8 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-6">
-        {/* Model Configuration Bar */}
-        <Settings cfg={cfg} setCfg={setCfg} />
+        {/* Gemini 3.8 Flash Status Hero */}
+        <ModelHero status={status} />
 
         {/* Navigation Tabs */}
         <div className="mb-6">
@@ -951,9 +899,9 @@ export default function App() {
         </div>
 
         {/* Tab Views */}
-        {tab === "chat" && <Chat cfg={cfg} onUpdate={() => setTick((t) => t + 1)} />}
+        {tab === "chat" && <Chat onUpdate={() => setTick((t) => t + 1)} />}
         {tab === "graph" && <Graph tick={tick} />}
-        {tab === "evaluate" && <Evaluate cfg={cfg} />}
+        {tab === "evaluate" && <Evaluate />}
       </main>
     </div>
   );

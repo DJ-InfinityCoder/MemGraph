@@ -1,5 +1,5 @@
 """Two memories: FlatMemory (vector baseline) vs GraphMemory (knowledge graph + consolidation)."""
-import json, math, re
+import json, math, os, re
 from collections import Counter
 from . import llm
 
@@ -33,13 +33,13 @@ def rule_extract(text):
                 break
     return out
 
-def extract_facts(text, provider="mock", model=None, api_key=None):
-    """LLM extraction of (subject, relation, object); falls back to rules."""
-    if provider != "mock":
+def extract_facts(text, model="gemini-3.8-flash", api_key=None):
+    """Gemini 3.8 Flash extraction of (subject, relation, object); falls back to rules if offline."""
+    if os.getenv("GEMINI_API_KEY") or api_key:
         sys = ("Extract personal facts about the user as JSON list of [subject, relation, object]. Use relations: "
                "lives_in, works_at, favorite_<thing>, allergic_to, likes. Subject is 'user'. Return ONLY JSON.")
         try:
-            raw = llm.chat(text, sys, provider, model, api_key)
+            raw = llm.chat(text, sys, model=model, api_key=api_key)
             raw = re.sub(r"```(?:json)?", "", raw).strip()
             return [(s.lower(), r.lower(), str(o).lower()) for s, r, o in json.loads(raw)]
         except Exception:
