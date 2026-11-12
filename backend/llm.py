@@ -1,6 +1,6 @@
 """Unified LLM client: gemini | openai | anthropic | mock. Uses plain REST (httpx)."""
 import os
-DEFAULTS = {"gemini": "gemini-2.0-flash", "openai": "gpt-4o-mini", "anthropic": "claude-haiku-4-5", "mock": "mock"}
+DEFAULTS = {"gemini": "gemini-3.8-flash", "openai": "gpt-4o-mini", "anthropic": "claude-haiku-4-5", "mock": "mock"}
 ENV_KEYS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
 
 def chat(prompt, system="", provider="mock", model=None, api_key=None, timeout=60):
