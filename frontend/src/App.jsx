@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Layers,
   Zap,
-  Sparkles,
   Info,
   Terminal,
   Cpu,
@@ -37,52 +36,6 @@ const api = (path, body) =>
     if (!r.ok) throw new Error(j.detail || "Request failed");
     return j;
   });
-
-/* -------------------------------------------------------------------------- */
-/* Dedicated Gemini 3.8 Flash Model Banner                                   */
-/* -------------------------------------------------------------------------- */
-function ModelHero({ status }) {
-  return (
-    <Card className="border-zinc-800 bg-zinc-950/80 mb-6 backdrop-blur-md">
-      <CardContent className="p-4 md:p-5">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-bold shadow-sm">
-              <Sparkles className="w-5 h-5 fill-black" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base font-bold text-white tracking-tight font-mono">
-                  Gemini 3.8 Flash
-                </span>
-                <Badge variant="default" className="text-[10px] font-mono py-0 px-2 bg-white text-black font-semibold">
-                  ACTIVE MODEL
-                </Badge>
-              </div>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Google DeepMind's workhorse agentic model • 1,048,576 Token Context • Structured Reasoning
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 text-xs font-mono">
-              <span
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  status?.configured ? "bg-white animate-pulse" : "bg-zinc-600"
-                )}
-              />
-              <span className="text-zinc-300">
-                {status?.configured ? "Backend Key Active (.env)" : "Local Simulation Mode"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /* Chat & Memory Interface                                                    */
@@ -817,36 +770,14 @@ function Evaluate() {
 export default function App() {
   const [tab, setTab] = useState("chat");
   const [tick, setTick] = useState(0);
-  const [status, setStatus] = useState(null);
-
-  useEffect(() => {
-    api("/status")
-      .then(setStatus)
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-white selection:text-black font-sans pb-16">
       {/* Top Navbar */}
       <header className="border-b border-zinc-800/80 bg-black/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-black font-mono font-black text-sm shadow-sm">
-              MG
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base md:text-lg tracking-tight text-white font-mono">
-                  MemGraph
-                </span>
-                <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-zinc-800 text-zinc-400 font-mono">
-                  Gemini 3.8 Flash
-                </Badge>
-              </div>
-              <p className="text-[11px] text-zinc-400 hidden sm:block">
-                Long-Horizon Knowledge Graph Memory Engine
-              </p>
-            </div>
+          <div className="font-bold text-base md:text-lg tracking-tight text-white font-mono">
+            MemGraph
           </div>
 
           <div className="flex items-center gap-3">
@@ -865,9 +796,6 @@ export default function App() {
 
       {/* Main Container */}
       <main className="max-w-6xl mx-auto px-4 md:px-6 pt-6">
-        {/* Gemini 3.8 Flash Status Hero */}
-        <ModelHero status={status} />
-
         {/* Navigation Tabs */}
         <div className="mb-6">
           <TabsList className="bg-zinc-950 border border-zinc-850 p-1">

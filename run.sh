@@ -1,5 +1,19 @@
 #!/usr/bin/env bash
-# Terminal 1: backend   |  Terminal 2: frontend
-python -m venv .venv && source .venv/bin/activate && pip install -r backend/requirements.txt
+
+if [ ! -d .venv ]; then
+    python -m venv .venv || exit 1
+fi
+
+if [ -f .venv/Scripts/activate ]; then
+    source .venv/Scripts/activate
+elif [ -f .venv/bin/activate ]; then
+    source .venv/bin/activate
+else
+    echo "Could not find the virtual environment activation script in .venv." >&2
+    exit 1
+fi
+
+pip install -r backend/requirements.txt || exit 1
+
 (cd frontend && npm install && npm run dev) &
-uvicorn backend.app:app --reload --port 8000
+python -m uvicorn backend.app:app --reload --port 8000
