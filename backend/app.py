@@ -34,6 +34,11 @@ def status():
         "configured": has_key
     }
 
+@app.get("/api/providers")
+def providers():
+    """Backward compatibility for cached clients."""
+    return {"providers": ["gemini"], "defaults": {"gemini": MODEL_NAME}}
+
 @app.post("/api/chat")
 def chat(r: ChatReq):
     CLOCK[0] += 1
